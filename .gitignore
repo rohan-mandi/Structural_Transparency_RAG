@@ -1,0 +1,59 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+.env.local
+.env.production.local
+.env.development.local
+
+# Secrets and credentials
+secrets/
+*.key
+*.pem
+*.p12
+credentials.json
+service_account.json
+api_keys.json
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Data and cache files
+data/chroma/
+*.db
+*.sqlite
+*.sqlite3
+chroma/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# macOS
+.AppleDouble
+.LSOverride
+*.DS_Store
