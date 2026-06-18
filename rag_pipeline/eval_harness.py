@@ -19,9 +19,9 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from .answer_matcher import match_answer
+from .answer_matcher import match_answer, match_theory_answer
 from .config import EVAL_DIR
-from .rag_qa import answer_question
+from .rag_qa import answer_closed_book, answer_question
 from .retriever import Retriever
 
 
@@ -102,7 +102,10 @@ def run_eval(eval_path: Path | None = None, results_path: Path | None = None,
         print(f"resuming: {len(done_qs)} items already in {results_path.name}, "
               f"{len(items) - len(done_qs)} remaining")
 
-    retriever = Retriever()
+    # Theory items are answered closed-book (no retrieval), so only build the
+    # retriever if at least one item actually needs the vector DB.
+    needs_retriever = any(it.get("eval_type") != "theory" for it in items)
+    retriever = Retriever() if needs_retriever else None
     rows = list(prior_rows)
     mode = "w" if fresh else "a"
     pending = [it for it in items if it["question"] not in done_qs]
@@ -111,14 +114,25 @@ def run_eval(eval_path: Path | None = None, results_path: Path | None = None,
         if fresh:
             f.truncate(0)
         for item in tqdm(pending, desc="eval"):
-            org_filter = item["source_org"] if scope_to_source_org else None
-            rag = answer_question(retriever, item["question"], org=org_filter)
-            verdict = match_answer(
-                question=item["question"], candidate=rag.answer,
-                reference_order=item["reference_order"],
-                reference_category=item["reference_category"],
-                reference_justification=item.get("reference_justification", ""),
-            )
+            if item.get("eval_type") == "theory":
+                # Closed-book: tests parametric theory knowledge; the corpus
+                # contains no institutional-logics theory texts.
+                rag = answer_closed_book(item["question"])
+                verdict = match_theory_answer(
+                    question=item["question"], candidate=rag.answer,
+                    reference_answer=item["reference_answer"],
+                    reference_order=item["reference_order"],
+                    reference_category=item["reference_category"],
+                )
+            else:
+                org_filter = item["source_org"] if scope_to_source_org else None
+                rag = answer_question(retriever, item["question"], org=org_filter)
+                verdict = match_answer(
+                    question=item["question"], candidate=rag.answer,
+                    reference_order=item["reference_order"],
+                    reference_category=item["reference_category"],
+                    reference_justification=item.get("reference_justification", ""),
+                )
             row = {
                 **item,
                 "candidate_answer": rag.answer,
@@ -180,12 +194,20 @@ def _report(rows: list[dict], csv_path: Path) -> None:
         print(f"\nfull results: {actual_path}")
         return
 
-    print("\nBy reference category, grouped by lab:")
-    by_cat = (df.groupby(["source_org", "reference_category"])["match"]
-                .agg(["mean", "count"]).round(3))
-    print(by_cat.to_string())
+    if "source_org" in df.columns and df["source_org"].notna().any():
+        # Corpus-grounded eval: break down by lab.
+        print("\nBy reference category, grouped by lab:")
+        by_cat = (df.groupby(["source_org", "reference_category"])["match"]
+                    .agg(["mean", "count"]).round(3))
+        print(by_cat.to_string())
 
-    print("\nOverall by lab:")
-    print(df.groupby("source_org")["match"].agg(["mean", "count"]).round(3).to_string())
+        print("\nOverall by lab:")
+        print(df.groupby("source_org")["match"].agg(["mean", "count"]).round(3).to_string())
+    else:
+        # Theory eval: break down along the two matrix axes.
+        print("\nBy institutional order (X-axis):")
+        print(df.groupby("reference_order")["match"].agg(["mean", "count"]).round(3).to_string())
+        print("\nBy elemental category (Y-axis):")
+        print(df.groupby("reference_category")["match"].agg(["mean", "count"]).round(3).to_string())
 
     print(f"\nfull results: {actual_path}")

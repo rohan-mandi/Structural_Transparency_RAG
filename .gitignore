@@ -1,37 +1,86 @@
-# Local environment files
+# ---------------------------------------------------------------------------
+# Secrets — NEVER commit these. Blocks .env AND .env.example, because the
+# example file currently contains a live Together API key. Once you scrub the
+# key out of .env.example (replace with a placeholder), you can force-add a
+# clean template with:  git add -f .env.example
+# ---------------------------------------------------------------------------
 .env
 .env.*
-!.env.example
-.env.local
-.env.production.local
-.env.development.local
-
-# Secrets and credentials
-secrets/
+*.env
+secrets.*
 *.key
 *.pem
-*.p12
-credentials.json
-service_account.json
-api_keys.json
 
-# Python bytecode and caches
+# ---------------------------------------------------------------------------
+# Generated data
+# ---------------------------------------------------------------------------
+# Chroma vector store — large, binary, regenerable via `python scripts/01_ingest.py`
+data/chroma/
+
+# Evaluation RUN outputs (regenerable via `python scripts/03_run_eval.py`).
+# The eval SETS (*_eval_set.jsonl) stay tracked — they are the benchmark and
+# matter for reproducibility.
+data/eval/*results*
+data/eval/*.csv
+
+# Local scratch/output dirs
+output/
+outputs/
+scratch/
+tmp/
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
+*$py.class
+*.so
+.Python
 build/
-.pytest_cache/
-.coverage
-htmlcov/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Virtual environments
 .venv/
 venv/
 env/
 ENV/
+env.bak/
+venv.bak/
 
-# IDE and Editor files
+# ---------------------------------------------------------------------------
+# Testing / type-checking / linting caches
+# ---------------------------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ---------------------------------------------------------------------------
+# Notebooks
+# ---------------------------------------------------------------------------
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# Editors / OS cruft
+# ---------------------------------------------------------------------------
 .vscode/
 .idea/
 *.swp
@@ -39,21 +88,9 @@ ENV/
 *~
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Data and cache files
-data/chroma/
-*.db
-*.sqlite
-*.sqlite3
-chroma/
-
-# Temporary files
-*.tmp
-*.temp
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
 *.log
-*.cache
-
-# macOS
-.AppleDouble
-.LSOverride
-*.DS_Store

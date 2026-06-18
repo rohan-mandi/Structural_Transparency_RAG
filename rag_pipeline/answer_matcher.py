@@ -48,6 +48,31 @@ Grading rules:
 Output strictly this JSON object (no prose, no markdown):
 {{"match": true|false, "reasoning": "one short sentence"}}"""
 
+# Prompt variant for theory questions: the reference is a canonical cell
+# descriptor from the ideal-types matrix, not an (order, category) diagnosis
+# of an organizational decision.
+MATCH_THEORY_USER = """Question:
+{question}
+
+Reference answer (canonical cell content from Thornton & Ocasio's ideal-types
+matrix, {reference_order} x {reference_category}):
+"{reference_answer}"
+
+Candidate response:
+\"\"\"{candidate}\"\"\"
+
+Grading rules:
+- The candidate matches if it conveys the same concept as the reference
+  answer. Paraphrases and added correct elaboration are fine.
+- Exact wording is NOT required, but the core concept must be present
+  (e.g., for reference "Share price", a candidate saying "the firm's stock
+  price / market valuation" matches; "profitability" alone does not).
+- If the candidate gives a concept belonging to a different cell of the
+  matrix, or refuses/says it does not know, it does NOT match.
+
+Output strictly this JSON object (no prose, no markdown):
+{{"match": true|false, "reasoning": "one short sentence"}}"""
+
 
 def _extract_json(text: str) -> dict | None:
     """Extract JSON object from LLM response, removing markdown formatting if present.
@@ -106,6 +131,36 @@ def match_answer(
         temperature=0.0, max_tokens=200,
     )
     # Parse JSON response from LLM
+    parsed = _extract_json(raw) or {}
+    return {
+        "match": bool(parsed.get("match", False)),
+        "reasoning": parsed.get("reasoning", "").strip(),
+        "raw": raw,
+    }
+
+
+def match_theory_answer(
+    *, question: str, candidate: str,
+    reference_answer: str, reference_order: str, reference_category: str,
+) -> dict:
+    """Grade a theory-question candidate against a canonical matrix cell.
+
+    Used for the theory eval set, where the reference answer is the cell
+    descriptor itself (e.g. "Share price") rather than an institutional-order
+    diagnosis of an organizational decision.
+
+    Returns the same dict shape as match_answer.
+    """
+    user = MATCH_THEORY_USER.format(
+        question=question, candidate=candidate,
+        reference_answer=reference_answer,
+        reference_order=reference_order, reference_category=reference_category,
+    )
+    raw = chat(
+        [{"role": "system", "content": MATCH_SYSTEM},
+         {"role": "user", "content": user}],
+        temperature=0.0, max_tokens=200,
+    )
     parsed = _extract_json(raw) or {}
     return {
         "match": bool(parsed.get("match", False)),

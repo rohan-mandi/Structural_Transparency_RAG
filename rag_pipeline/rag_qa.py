@@ -86,3 +86,20 @@ def answer_question(retriever: Retriever, question: str, *, org: Optional[str] =
         {"role": "user", "content": user},
     ], temperature=0.0, max_tokens=512)
     return RAGAnswer(question=question, answer=response.strip(), retrieved=chunks)
+
+
+CLOSED_BOOK_SYSTEM = (
+    "You are an expert in organizational theory and institutional logics. "
+    "Answer the question directly and concisely from your own knowledge. "
+    "Commit to a single answer; do not hedge across alternatives."
+)
+
+
+def answer_closed_book(question: str) -> RAGAnswer:
+    """Answer without retrieval — used for the theory eval set, whose questions
+    are about institutional logics theory rather than the indexed corpus."""
+    response = chat([
+        {"role": "system", "content": CLOSED_BOOK_SYSTEM},
+        {"role": "user", "content": question},
+    ], temperature=0.0, max_tokens=512)
+    return RAGAnswer(question=question, answer=response.strip(), retrieved=[])
